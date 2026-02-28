@@ -1,15 +1,33 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Load images
+const sprites = {
+    idle: new Image(),
+    forwardWalk: new Image(),
+    backWalk: new Image(),
+    walkRight: new Image(),
+    walkLeft: new Image()
+};
+
+sprites.idle.src = "assets/forward.png";
+sprites.forwardWalk.src = "assets/forwardwalk.gif";
+sprites.backWalk.src = "assets/backwalk.gif";
+sprites.walkRight.src = "assets/sidewalkr.gif";
+sprites.walkLeft.src = "assets/sidewalkl.gif";
+
+let currentSprite = sprites.idle;
+
 let player = {
-    x: 256,
-    y: 256,
-    size: 32
+    x: 240,
+    y: 240,
+    size: 64,
+    speed: 4,
+    moving: false
 };
 
 function drawPlayer() {
-    ctx.fillStyle = "blue";
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+    ctx.drawImage(currentSprite, player.x, player.y, player.size, player.size);
 }
 
 function gameLoop() {
@@ -19,37 +37,36 @@ function gameLoop() {
 }
 
 document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowUp") player.y -= 10;
-    if (e.key === "ArrowDown") player.y += 10;
-    if (e.key === "ArrowLeft") player.x -= 10;
-    if (e.key === "ArrowRight") player.x += 10;
+    player.moving = true;
 
-    checkEncounter();
+    if (e.key === "ArrowUp") {
+        player.y -= player.speed;
+        currentSprite = sprites.backWalk;
+    }
+    if (e.key === "ArrowDown") {
+        player.y += player.speed;
+        currentSprite = sprites.forwardWalk;
+    }
+    if (e.key === "ArrowRight") {
+        player.x += player.speed;
+        currentSprite = sprites.walkRight;
+    }
+    if (e.key === "ArrowLeft") {
+        player.x -= player.speed;
+        currentSprite = sprites.walkLeft;
+    }
 });
 
-function checkEncounter() {
-    if (Math.random() < 0.1) {
-        startBattle();
-    }
-}
+document.addEventListener("keyup", () => {
+    player.moving = false;
+    currentSprite = sprites.idle;
+});
 
-function startBattle() {
-    document.getElementById("battleBox").classList.remove("hidden");
-    fetch("http://127.0.0.1:5000/enemy")
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("enemyName").innerText = data.name;
-            document.getElementById("battleText").innerText = 
-                "A wild " + data.name + " appeared!";
-        });
-}
-
-function attack() {
-    fetch("http://127.0.0.1:5000/attack")
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("battleText").innerText = data.result;
-        });
-}
-
-gameLoop();
+// Start game once all images load
+Promise.all(
+    Object.values(sprites).map(img => 
+        new Promise(resolve => img.onload = resolve)
+    )
+).then(() => {
+    gameLoop();
+});
